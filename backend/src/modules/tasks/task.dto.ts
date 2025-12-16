@@ -5,7 +5,7 @@ export const createTaskSchema = z.object({
     description : z.string().optional(),
     dueDate : z.string(),
     priority : z.enum(["Low", "Medium", "High", "Urgent"]),
-    assignToId : z.string(),
+    assignedToId : z.string(),
 })
 
 export const updateTaskSchema = z.object({

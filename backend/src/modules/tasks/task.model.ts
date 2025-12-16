@@ -7,7 +7,7 @@ export interface ITask extends Document {
     priority : "Low" | "Medium" | "High" | "Urgent";
     status : "To Do" | "In Progress" | "Review" | "Complete";
     creatorId : mongoose.Types.ObjectId;
-    assginedToId : mongoose.Types.ObjectId;
+    assignedToId : mongoose.Types.ObjectId;
 }
 
 const TaskSchema = new Schema<ITask> ({
@@ -38,7 +38,7 @@ const TaskSchema = new Schema<ITask> ({
         ref : "User",
         required : true,
     },
-    assginedToId : {
+    assignedToId : {
         type : Schema.Types.ObjectId,
         ref : "User",
         required : true,

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { createTaskSchema, updateTaskSchema } from "./task.dto";
-import { createNewTask, getUserTasks, updateTask, deleteTask } from "./task.service";
+import { createNewTask, getUserTasks, updateTask, deleteTask, getDashboardData } from "./task.service";
+import { getFilteredTasks } from "./task.repository";
 
 export const createTaskHandler = async (req:Request, res: Response)=>{
     try {
@@ -55,3 +56,22 @@ export const deleteTaskHandler = async (req: Request, res: Response) => {
     res.status(400).json({ message: error.message });
   }
 };
+
+export const getDashboardHandler = async (req : Request , res : Response) => {
+    try {
+        const userId = (req as any).user.id;
+        const data = await getDashboardData(userId);
+        res.json(data);
+    } catch (err : any){
+        res.status(400).json({
+            message : err.message
+        })
+    }
+}
+
+export const getFilteredTasksHandler = async (req: Request, res : Response) =>{
+    const userId = (req as any).user.id;
+    const tasks = await getFilteredTasks(userId, req.query);
+
+    res.json (tasks);
+}
