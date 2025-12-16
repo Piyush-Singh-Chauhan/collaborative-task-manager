@@ -1,13 +1,21 @@
 import { createTask,getTaskByUser,findTaskById,updateTaskById, deleteTaskById } from "./task.repository";
 import Task from "./task.model"
 import mongoose from "mongoose";
+import { io } from '../../server';
+import taskModel from "./task.model";
 
 export const createNewTask = async(data : any, creatorId : string) => {
-    return createTask({
-        ...data, 
-        creatorId,
-        assginedToId : data.assginedToId,
-    });
+   const task = await createTask({
+    ...data,
+    creatorId,
+    assignedToId : data.assignedToId,
+   });
+
+   if(task.assignedToId) {
+    io.to(task.assignedToId.toString()).emit("Task:assigned", {
+        message : "A new task has been assigned to you."
+    })
+   }
 }
 
 export const getUserTasks = async (userId : string)=>{
@@ -23,7 +31,16 @@ export const updateTask = async(taskId : string, userId : string, data : any) =>
         throw new Error ("Unauthrized");
     }
 
-    return updateTaskById(taskId, data)
+    const updatedTask = await updateTaskById(taskId, data);
+
+    if(data.status && task.assignedToId) {
+        io.to(task.assignedToId.toString()).emit("Task:updated", {
+            message : `Task status updated to ${data.status}`,
+            task : updatedTask,
+        });
+    }
+
+    return updatedTask; 
 }
 
 export const deleteTask = async (taskId : string, userId: string) => {
