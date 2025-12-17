@@ -3,6 +3,8 @@ import { RegisterDto, LoginDto } from "./auth.dto"
 import { createUser, findUserByEmail } from "./auth.repository"
 import { email } from "zod";
 import { generateToken } from "../../utils/jwt";
+import { generateOtp, hashvalue, getOtpExpiry } from "../../utils/otp";
+
 
 export const registerUser = async ( data: RegisterDto) => {
     const existingUser = await findUserByEmail (data.email);
