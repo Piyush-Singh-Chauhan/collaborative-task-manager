@@ -6,8 +6,9 @@ export const createTask = async( data : Partial<ITask>) => {
 }
 
 export const getTaskByUser = async (userId : string) => {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
     return Task.find({
-        $or : [{creatorId : userId}, {assginedToId : userId}],
+        $or : [{creatorId : userObjectId}, {assignedToIds : userObjectId}],
     });
 }
 
@@ -27,7 +28,7 @@ export const getFilteredTasks = async (userId : string, filters : any)=> {
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
     const query : any = {
-        $or : [{ creatorId : userObjectId}, {assignedToId : userObjectId}]
+        $or : [{ creatorId : userObjectId}, {assignedToIds : userObjectId}]
     };
 
     if(filters.status){

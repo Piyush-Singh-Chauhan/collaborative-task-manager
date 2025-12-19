@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { taskApi } from "../api/task.api";
+import { getAllUsers } from "../api/auth.api";
 import type { CreateTaskPayload } from "../types/task.types";
+import type { User } from "../types/auth.types";
 import { useAuth } from "../context/AuthContext";
 
 interface TaskModalProps {
@@ -12,32 +14,56 @@ interface TaskModalProps {
 
 const TaskModal = ({ isOpen, onClose, onTaskCreated }: TaskModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const { user } = useAuth();
   
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
-  } = useForm<CreateTaskPayload>();
+  } = useForm<CreateTaskPayload>({
+    defaultValues: {
+      assignedToIds: user?.id ? [user.id] : [],
+    }
+  });
+
+  const assignedToIds = watch("assignedToIds", []);
+
+  // Fetch all users
+  useEffect(() => {
+    if (isOpen) {
+      fetchUsers();
+    }
+  }, [isOpen]);
+
+  const fetchUsers = async () => {
+    try {
+      setUsersLoading(true);
+      const usersData = await getAllUsers();
+      setUsers(usersData);
+    } catch (err: any) {
+      console.error("Failed to fetch users:", err);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
 
   const onSubmit = async (data: CreateTaskPayload) => {
     try {
       setLoading(true);
       setError(null);
       
-      // Use current user's ID as the assigned user
-      const taskData = {
-        ...data,
-        assignedToId: user?.id || "",
-      };
-      
-      if (!taskData.assignedToId) {
-        throw new Error("User not authenticated");
+      // Ensure at least one user is assigned
+      if (!data.assignedToIds || data.assignedToIds.length === 0) {
+        throw new Error("At least one user must be assigned to the task");
       }
       
-      await taskApi.createTask(taskData);
+      await taskApi.createTask(data);
       reset();
       onTaskCreated();
       onClose();
@@ -49,10 +75,18 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated }: TaskModalProps) => {
     }
   };
 
+  const toggleUserSelection = (userId: string) => {
+    const newAssignedToIds = assignedToIds.includes(userId)
+      ? assignedToIds.filter(id => id !== userId)
+      : [...assignedToIds, userId];
+    
+    setValue("assignedToIds", newAssignedToIds);
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-opacity-30 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md transform transition-all duration-300 scale-100">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
@@ -154,27 +188,53 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated }: TaskModalProps) => {
               )}
             </div>
 
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center mb-2">
-                <svg className="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                </svg>
-                <label className="block text-sm font-medium text-blue-800">
-                  Assigned To
-                </label>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Assign To
+              </label>
+              <div className="border border-gray-300 rounded-lg max-h-40 overflow-y-auto">
+                {usersLoading ? (
+                  <div className="p-4 text-center text-gray-500">
+                    Loading users...
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    {users.map(u => (
+                      <div 
+                        key={u.id} 
+                        className="flex items-center p-3 hover:bg-gray-50 cursor-pointer"
+                        onClick={() => toggleUserSelection(u.id)}
+                      >
+                        <div className="flex items-center h-5">
+                          <input
+                            type="checkbox"
+                            checked={assignedToIds.includes(u.id)}
+                            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            readOnly
+                          />
+                        </div>
+                        <div className="ml-3 flex items-center">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-semibold text-xs mr-3">
+                            {u.name?.charAt(0)?.toUpperCase() || 'U'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{u.name}</p>
+                            <p className="text-xs text-gray-500">{u.email}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center text-sm text-gray-700">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-semibold text-xs mr-3">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
-                <div>
-                  <p className="font-medium">{user?.name || "Unknown user"}</p>
-                  <p className="text-gray-500">{user?.email}</p>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-blue-700">
-                Tasks are automatically assigned to the current user.
-              </p>
+              {errors.assignedToIds && (
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  {errors.assignedToIds.message}
+                </p>
+              )}
             </div>
 
             <div className="flex justify-end space-x-3 pt-2">

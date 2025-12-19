@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { createTaskSchema, updateTaskSchema } from "./task.dto";
 import { createNewTask, getUserTasks, updateTask, deleteTask, getDashboardData } from "./task.service";
-import { getFilteredTasks } from "./task.repository";
+import { getFilteredTasks, findTaskById } from "./task.repository";
 
 export const createTaskHandler = async (req:Request, res: Response)=>{
     try {
@@ -22,12 +22,38 @@ export const getTaskHandler = async (req : Request, res : Response) => {
     res.json(tasks);
 }
 
+export const getTaskByIdHandler = async (req : Request, res : Response) => {
+    try {
+        const taskId = req.params.id;
+        const userId = (req as any).user.id;
+        
+        if(!taskId){
+            return res.status(400).json({message : "Task id is required."})
+        }
+        
+        const task = await findTaskById(taskId);
+        
+        if(!task) {
+            return res.status(404).json({message : "Task not found."})
+        }
+        
+        // Check if user is authorized to view this task
+        if(task.creatorId.toString() !== userId && task.assignedToId.toString() !== userId) {
+            return res.status(403).json({message : "Unauthorized to view this task."})
+        }
+        
+        res.json(task);
+    } catch (err : any) {
+        res.status(400).json({message : err.message});
+    }
+}
+
 export const updateTaskHandler = async (req : Request, res : Response) => {
     try {
         const taskId = req.params.id;
 
         if(!taskId){
-            return res.status(400).json({messgae : "Task id is required."})
+            return res.status(400).json({message : "Task id is required."})
         }
 
         const data = updateTaskSchema.parse(req.body);
@@ -46,7 +72,7 @@ export const deleteTaskHandler = async (req: Request, res: Response) => {
     const taskId = req.params.id;
 
         if(!taskId){
-            return res.status(400).json({messgae : "Task id is required."})
+            return res.status(400).json({message : "Task id is required."})
         }
 
     const userId = (req as any).user.id;

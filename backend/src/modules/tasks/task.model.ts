@@ -5,9 +5,9 @@ export interface ITask extends Document {
     description : string;
     dueDate : Date;
     priority : "Low" | "Medium" | "High" | "Urgent";
-    status : "To Do" | "In Progress" | "Review" | "Complete";
+    status : "To Do" | "In Progress" | "Review" | "Completed";
     creatorId : mongoose.Types.ObjectId;
-    assignedToId : mongoose.Types.ObjectId;
+    assignedToIds : mongoose.Types.ObjectId[];
 }
 
 const TaskSchema = new Schema<ITask> ({
@@ -30,7 +30,7 @@ const TaskSchema = new Schema<ITask> ({
     },
     status : {
         type : String,
-        enum : ["To Do", "In Progress", "Review", "Complete"],
+        enum : ["To Do", "In Progress", "Review", "Completed"],
         default : "To Do",
     },
     creatorId : {
@@ -38,11 +38,10 @@ const TaskSchema = new Schema<ITask> ({
         ref : "User",
         required : true,
     },
-    assignedToId : {
+    assignedToIds : [{
         type : Schema.Types.ObjectId,
         ref : "User",
-        required : true,
-    }
+    }]
 },
     { timestamps : true}
 );

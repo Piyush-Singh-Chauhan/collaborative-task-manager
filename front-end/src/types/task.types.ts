@@ -6,7 +6,7 @@ export interface Task {
   priority: "Low" | "Medium" | "High" | "Urgent";
   status: "To Do" | "In Progress" | "Review" | "Completed";
   creatorId: string;
-  assignedToId: string;
+  assignedToIds: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -16,7 +16,7 @@ export interface CreateTaskPayload {
   description?: string;
   dueDate: string;
   priority: "Low" | "Medium" | "High" | "Urgent";
-  assignedToId: string;
+  assignedToIds: string[];
 }
 
 export interface UpdateTaskPayload {
@@ -25,7 +25,7 @@ export interface UpdateTaskPayload {
   dueDate?: string;
   priority?: "Low" | "Medium" | "High" | "Urgent";
   status?: "To Do" | "In Progress" | "Review" | "Completed";
-  assignedToId?: string;
+  assignedToIds?: string[];
 }
 
 export interface DashboardData {

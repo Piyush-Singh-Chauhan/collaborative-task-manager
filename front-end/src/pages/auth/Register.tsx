@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerUser } from "../../api/auth.api";
 import type { RegisterPayload } from "../../types/auth.types";
+import { validateName, validateEmail, validatePassword, capitalizeFirstLetter } from "../../utils/validation";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -15,17 +16,84 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  // Field-specific errors
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Real-time validation on field change
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Automatically capitalize first letter
+    const capitalizedValue = value.length > 0 ? capitalizeFirstLetter(value) : value;
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      name: capitalizedValue,
     });
+    
+    // Real-time validation
+    const error = validateName(capitalizedValue);
+    setNameError(error);
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({
+      ...formData,
+      email: value,
+    });
+    
+    // Real-time validation
+    const error = validateEmail(value);
+    setEmailError(error);
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({
+      ...formData,
+      password: value,
+    });
+    
+    // Real-time validation
+    const error = validatePassword(value);
+    setPasswordError(error);
+  };
+
+  // Validation on blur (when user leaves the field)
+  const handleNameBlur = () => {
+    const error = validateName(formData.name);
+    setNameError(error);
+  };
+
+  const handleEmailBlur = () => {
+    const error = validateEmail(formData.email);
+    setEmailError(error);
+  };
+
+  const handlePasswordBlur = () => {
+    const error = validatePassword(formData.password);
+    setPasswordError(error);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Final validation before submission
+    const nameValidationError = validateName(formData.name);
+    const emailValidationError = validateEmail(formData.email);
+    const passwordValidationError = validatePassword(formData.password);
+    
+    setNameError(nameValidationError);
+    setEmailError(emailValidationError);
+    setPasswordError(passwordValidationError);
+    
+    // If any validation fails, prevent submission
+    if (nameValidationError || emailValidationError || passwordValidationError) {
+      return;
+    }
 
     try {
       setLoading(true);
@@ -61,33 +129,54 @@ const Register = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
             <input
               id="name"
               type="text"
               name="name"
               placeholder="John Doe"
+              maxLength={60}
+              minLength={2}
               value={formData.name}
-              onChange={handleChange}
+              onChange={handleNameChange}
+              onBlur={handleNameBlur}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className={`w-full px-4 py-3 border ${nameError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
             />
+            {nameError && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {nameError}
+              </p>
+            )}
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               id="email"
               type="email"
               name="email"
               placeholder="you@example.com"
+              maxLength={60}
               value={formData.email}
-              onChange={handleChange}
+              onChange={handleEmailChange}
+              onBlur={handleEmailBlur}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className={`w-full px-4 py-3 border ${emailError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
             />
+            {emailError && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {emailError}
+              </p>
+            )}
           </div>
 
           <div>
@@ -107,11 +196,20 @@ const Register = () => {
               name="password"
               placeholder="••••••••"
               value={formData.password}
-              onChange={handleChange}
+              onChange={handlePasswordChange}
+              onBlur={handlePasswordBlur}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className={`w-full px-4 py-3 border ${passwordError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
             />
-            <p className="mt-2 text-sm text-gray-500">At least 6 characters</p>
+            {/* <p className="mt-2 text-sm text-gray-500">6-16 characters</p> */}
+            {passwordError && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {passwordError}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center">

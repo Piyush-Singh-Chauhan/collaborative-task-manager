@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { AuthContextType, User } from "../types/auth.types";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -10,6 +11,7 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
 
   // Load auth data on refresh
   useEffect(() => {
@@ -34,6 +36,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     localStorage.removeItem("user");
     setUser(null);
     setIsAuthenticated(false);
+    navigate("/login");
   };
 
   return (

@@ -25,10 +25,18 @@ const Notification = () => {
       
       setNotifications(prev => [newNotification, ...prev]);
       
-      // Auto-remove notification after 5 seconds
+      // Play notification sound
+      try {
+        const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFfHp8fHx9fX1+fn5/f3+AgICBgYGCgoKDg4OEhISFhYWGhoaHh4eIiIiJiYmKioqLi4uMjIyNjY2Ojo6Pj4+QkJCRkZGSkpKTk5OUlJSVlZWWlpaXl5eYmJiZmZmampqbm5ucnJydnZ2enp6fn5+goKChoaGioqKjo6OkpKSlpaWmpqanp6eoqKipqamqqqqrq6usrKytra2urq6vr6+wsLCxsbGysrKzs7O0tLS1tbW2tra3t7e4uLi5ubm6urq7u7u8vLy9vb2+vr6/v7/AwMDBwcHCwsLDw8PExMTFxcXGxsbHx8fIyMjJycnKysrLy8vMzMzNzc3Ozs7Pz8/Q0NDR0dHS0tLT09PU1NTV1dXW1tbX19fY2NjZ2dna2trb29vc3Nzd3d3e3t7f39/g4ODh4eHi4uLj4+Pk5OTl5eXm5ubn5+fo6Ojp6enq6urr6+vs7Ozt7e3u7u7v7+/w8PDx8fHy8vLz8/P09PT19fX29vb39/f4+Pj5+fn6+vr7+/v8/Pz9/f3+/v7///8=");
+        audio.play().catch(e => console.log("Audio play failed:", e));
+      } catch (e) {
+        console.log("Audio play failed:", e);
+      }
+      
+      // Auto-remove notification after 10 seconds
       setTimeout(() => {
         setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
-      }, 5000);
+      }, 10000);
     };
 
     const handleTaskUpdated = (data: any) => {
@@ -41,10 +49,18 @@ const Notification = () => {
       
       setNotifications(prev => [newNotification, ...prev]);
       
-      // Auto-remove notification after 5 seconds
+      // Play notification sound
+      try {
+        const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFfHp8fHx9fX1+fn5/f3+AgICBgYGCgoKDg4OEhISFhYWGhoaHh4eIiIiJiYmKioqLi4uMjIyNjY2Ojo6Pj4+QkJCRkZGSkpKTk5OUlJSVlZWWlpaXl5eYmJiZmZmampqbm5ucnJydnZ2enp6fn5+goKChoaGioqKjo6OkpKSlpaWmpqanp6eoqKipqamqqqqrq6usrKytra2urq6vr6+wsLCxsbGysrKzs7O0tLS1tbW2tra3t7e4uLi5ubm6urq7u7u8vLy9vb2+vr6/v7/AwMDBwcHCwsLDw8PExMTFxcXGxsbHx8fIyMjJycnKysrLy8vMzMzNzc3Ozs7Pz8/Q0NDR0dHS0tLT09PU1NTV1dXW1tbX19fY2NjZ2dna2trb29vc3Nzd3d3e3t7f39/g4ODh4eHi4uLj4+Pk5OTl5eXm5ubn5+fo6Ojp6enq6urr6+vs7Ozt7e3u7u7v7+/w8PDx8fHy8vLz8/P09PT19fX29vb39/f4+Pj5+fn6+vr7+/v8/Pz9/f3+/v7///8=");
+        audio.play().catch(e => console.log("Audio play failed:", e));
+      } catch (e) {
+        console.log("Audio play failed:", e);
+      }
+      
+      // Auto-remove notification after 10 seconds
       setTimeout(() => {
         setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
-      }, 5000);
+      }, 10000);
     };
 
     socket.on("Task:assigned", handleTaskAssigned);
@@ -60,11 +76,10 @@ const Notification = () => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  if (notifications.length === 0) return null;
-
+  // Don't hide notifications, but show a counter instead
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2">
-      {notifications.map((notification) => (
+      {notifications.slice(0, 3).map((notification) => (
         <div
           key={notification.id}
           className={`p-4 rounded shadow-lg max-w-md animate-fadeIn ${
@@ -93,6 +108,11 @@ const Notification = () => {
           </div>
         </div>
       ))}
+      {notifications.length > 3 && (
+        <div className="p-3 rounded shadow-lg bg-blue-500 text-white text-center font-medium">
+          +{notifications.length - 3} more notifications
+        </div>
+      )}
     </div>
   );
 };

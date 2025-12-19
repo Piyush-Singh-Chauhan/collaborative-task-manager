@@ -8,6 +8,12 @@ export const taskApi = {
     return response.data;
   },
 
+  // Get a single task by ID
+  getTaskById: async (taskId: string): Promise<Task> => {
+    const response = await api.get(`/tasks/${taskId}`);
+    return response.data;
+  },
+
   // Create a new task
   createTask: async (payload: CreateTaskPayload): Promise<Task> => {
     const response = await api.post("/tasks", payload);
@@ -23,7 +29,7 @@ export const taskApi = {
   // Delete a task
   deleteTask: async (taskId: string): Promise<void> => {
     await api.delete(`/tasks/${taskId}`);
-  },
+    },
 
   // Get dashboard data
   getDashboardData: async (): Promise<DashboardData> => {

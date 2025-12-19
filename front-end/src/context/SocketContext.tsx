@@ -41,14 +41,12 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
 
     newSocket.on("Task:assigned", (data) => {
       console.log("Task assigned:", data);
-      // You can show a notification here
-      alert("You have been assigned a new task!");
+      // Notification component will handle this
     });
 
     newSocket.on("Task:updated", (data) => {
       console.log("Task updated:", data);
-      // You can show a notification or update the UI here
-      alert(`Task updated: ${data.task?.title}`);
+      // Notification component will handle this
     });
 
     setSocket(newSocket);
@@ -57,7 +55,14 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
     return () => {
       newSocket.close();
     };
-  }, [user?.id]);
+  }, []);
+
+  // Handle user changes
+  useEffect(() => {
+    if (socket && user?.id) {
+      socket.emit("join", user.id);
+    }
+  }, [socket, user?.id]);
 
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>

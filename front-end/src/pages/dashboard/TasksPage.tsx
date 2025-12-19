@@ -4,6 +4,7 @@ import { taskApi } from "../../api/task.api";
 import Navbar from "../../components/layout/Navbar";
 import Sidebar from "../../components/layout/Sidebar";
 import TaskModal from "../../components/TaskModal";
+import TaskDetailsModal from "../../components/TaskDetailsModal";
 
 const TasksPage = () => {
   const [filters, setFilters] = useState({
@@ -12,6 +13,8 @@ const TasksPage = () => {
     sortBy: "dueDate",
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   // Create a cache key based on filters
   const cacheKey = useMemo(() => {
@@ -312,7 +315,13 @@ const TasksPage = () => {
                     <div className="text-xs text-gray-500">
                       Created {new Date(task.createdAt).toLocaleDateString()}
                     </div>
-                    <button className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                    <button 
+                      onClick={() => {
+                        setSelectedTaskId(task._id);
+                        setIsDetailsModalOpen(true);
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    >
                       View Details
                     </button>
                   </div>
@@ -327,6 +336,16 @@ const TasksPage = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onTaskCreated={() => mutate()}
+      />
+      
+      <TaskDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => {
+          setIsDetailsModalOpen(false);
+          setSelectedTaskId(null);
+        }}
+        taskId={selectedTaskId}
+        onTaskUpdated={() => mutate()}
       />
     </div>
   );

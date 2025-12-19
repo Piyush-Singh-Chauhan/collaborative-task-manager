@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { loginUser } from "../../api/auth.api";
 import { useAuth } from "../../context/AuthContext";
 import type { LoginPayload } from "../../types/auth.types";
+import { validateEmail, validatePassword } from "../../utils/validation";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -16,17 +17,61 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  // Field-specific errors
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Real-time validation on field change
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      email: value,
     });
+    
+    // Real-time validation
+    const error = validateEmail(value);
+    setEmailError(error);
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({
+      ...formData,
+      password: value,
+    });
+    
+    // Real-time validation
+    const error = validatePassword(value);
+    setPasswordError(error);
+  };
+
+  // Validation on blur (when user leaves the field)
+  const handleEmailBlur = () => {
+    const error = validateEmail(formData.email);
+    setEmailError(error);
+  };
+
+  const handlePasswordBlur = () => {
+    const error = validatePassword(formData.password);
+    setPasswordError(error);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Final validation before submission
+    const emailValidationError = validateEmail(formData.email);
+    const passwordValidationError = validatePassword(formData.password);
+    
+    setEmailError(emailValidationError);
+    setPasswordError(passwordValidationError);
+    
+    // If any validation fails, prevent submission
+    if (emailValidationError || passwordValidationError) {
+      return;
+    }
 
     try {
       setLoading(true);
@@ -64,7 +109,7 @@ const Login = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
             <input
@@ -72,11 +117,21 @@ const Login = () => {
               type="email"
               name="email"
               placeholder="you@example.com"
+              maxLength={60}
               value={formData.email}
-              onChange={handleChange}
+              onChange={handleEmailChange}
+              onBlur={handleEmailBlur}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className={`w-full px-4 py-3 border ${emailError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
             />
+            {emailError && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {emailError}
+              </p>
+            )}
           </div>
 
           <div>
@@ -96,10 +151,19 @@ const Login = () => {
               name="password"
               placeholder="••••••••"
               value={formData.password}
-              onChange={handleChange}
+              onChange={handlePasswordChange}
+              onBlur={handlePasswordBlur}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className={`w-full px-4 py-3 border ${passwordError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
             />
+            {passwordError && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {passwordError}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
