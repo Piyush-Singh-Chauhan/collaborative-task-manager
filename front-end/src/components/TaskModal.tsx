@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { taskApi } from "../api/task.api";
 import { getAllUsers } from "../api/auth.api";
 import type { CreateTaskPayload } from "../types/task.types";
 import type { User } from "../types/auth.types";
-import { useAuth } from "../context/AuthContext";
 import { ValidationService } from "../utils/validation";
 
 interface TaskModalProps {
@@ -16,57 +15,25 @@ interface TaskModalProps {
 
 const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) => {
   const [loading, setLoading] = useState(false);
-  const [usersLoading, setUsersLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const { user } = useAuth();
-  const modalRef = useRef<HTMLDivElement>(null);
+  const [usersLoading, setUsersLoading] = useState(false);
 
-  // Handle escape key to close modal
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      // Focus the modal when it opens
-      setTimeout(() => {
-        if (modalRef.current) {
-          modalRef.current.focus();
-        }
-      }, 0);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isOpen, onClose]);
-  
   const {
     register,
     handleSubmit,
     reset,
     setValue,
     watch,
-    formState: { errors },
   } = useForm<CreateTaskPayload>({
     defaultValues: {
-      assignedToIds: user?.id ? [user.id] : [],
+      assignedToIds: [],
     }
   });
 
   const assignedToIds = watch("assignedToIds", []);
 
-  // Fetch all users
-  useEffect(() => {
-    if (isOpen) {
-      fetchUsers();
-    }
-  }, [isOpen]);
-
+  // Fetch users when modal opens
   const fetchUsers = async () => {
     try {
       setUsersLoading(true);
@@ -79,12 +46,10 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
     }
   };
 
-  // Field-specific errors (shown on blur and submit)
-  const [titleError, setTitleError] = useState<string | null>(null);
-  const [descriptionError, setDescriptionError] = useState<string | null>(null);
-  const [dueDateError, setDueDateError] = useState<string | null>(null);
-  const [priorityError, setPriorityError] = useState<string | null>(null);
-  const [assignedToError, setAssignedToError] = useState<string | null>(null);
+  // Load users when modal opens
+  if (isOpen && users.length === 0 && !usersLoading) {
+    fetchUsers();
+  }
 
   // Helper function to auto-capitalize first letter of title
   const autoCapitalizeTitle = (value: string): string => {
@@ -114,29 +79,70 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
 
   // Handle priority change without real-time validation
   const handlePriorityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
+    const value = e.target.value as "Low" | "Medium" | "High" | "Urgent";
     setValue("priority", value);
   };
 
+  // Toggle user selection
+  const toggleUserSelection = (userId: string) => {
+    const newAssignedToIds = assignedToIds && assignedToIds.includes(userId)
+      ? assignedToIds.filter(id => id !== userId)
+      : [...(assignedToIds || []), userId];
+    
+    setValue("assignedToIds", newAssignedToIds);
+    
+    // Clear assigned to error when a user is selected
+    if (newAssignedToIds.length > 0) {
+      setAssignedToError(null);
+    }
+  };
+
+  // Field-specific errors (shown on blur and submit)
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
+  const [dueDateError, setDueDateError] = useState<string | null>(null);
+  const [priorityError, setPriorityError] = useState<string | null>(null);
+  const [assignedToError, setAssignedToError] = useState<string | null>(null);
+
   // Validation on blur (when user leaves the field)
   const handleTitleBlur = () => {
-    const error = ValidationService.validateTaskTitle(watch("title") || "");
-    setTitleError(error?.message ?? null);
+    const value = watch("title") || "";
+    if (value) {
+      const error = ValidationService.validateTaskTitle(value);
+      setTitleError(error?.message ?? null);
+    } else {
+      setTitleError(null);
+    }
   };
 
   const handleDescriptionBlur = () => {
-    const error = ValidationService.validateTaskDescription(watch("description") || "");
-    setDescriptionError(error?.message ?? null);
+    const value = watch("description") || "";
+    if (value) {
+      const error = ValidationService.validateTaskDescription(value);
+      setDescriptionError(error?.message ?? null);
+    } else {
+      setDescriptionError(null);
+    }
   };
 
   const handleDueDateBlur = () => {
-    const error = ValidationService.validateTaskDueDate(watch("dueDate") || "");
-    setDueDateError(error?.message ?? null);
+    const value = watch("dueDate") || "";
+    if (value) {
+      const error = ValidationService.validateTaskDueDate(value);
+      setDueDateError(error?.message ?? null);
+    } else {
+      setDueDateError(null);
+    }
   };
 
   const handlePriorityBlur = () => {
-    const error = ValidationService.validateTaskPriority(watch("priority") || "");
-    setPriorityError(error?.message ?? null);
+    const value = watch("priority") || "";
+    if (value) {
+      const error = ValidationService.validateTaskPriority(value);
+      setPriorityError(error?.message ?? null);
+    } else {
+      setPriorityError(null);
+    }
   };
 
   const onSubmit = async (data: CreateTaskPayload) => {
@@ -159,7 +165,7 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
       
       // Check if at least one user is assigned
       if (!data.assignedToIds || data.assignedToIds.length === 0) {
-        setAssignedToError("At least one user must be assigned to the task.");
+        setAssignedToError("At least one user must be assigned to the task");
         return;
       }
 
@@ -175,35 +181,25 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
       
       // Optimistic update if mutate function is provided
       if (mutate) {
-        // Update UI immediately by adding the new task to the list
+        // Add new task to UI immediately
         mutate(async (currentData: any) => {
-          if (!currentData) return currentData;
-          
-          // We'll add a temporary task with a placeholder ID
-          const tempTask = {
-            _id: 'temp-' + Date.now(),
-            ...data,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            creatorId: '', // This would be set by the backend
-          };
-          
-          return [tempTask, ...currentData];
+          if (!currentData) return [data as any];
+          return [...currentData, data];
         }, false);
       }
       
       await taskApi.createTask(data);
-      reset();
       
       // Revalidate if mutate function is provided
       if (mutate) {
         mutate();
       }
       
+      reset();
       onTaskCreated();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || "Failed to create task.");
+      setError(err.response?.data?.message || err.message || "Failed to create task");
       console.error(err);
       
       // Revalidate on error to rollback if mutate function is provided
@@ -215,26 +211,11 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
     }
   };
 
-  const toggleUserSelection = (userId: string) => {
-    const newAssignedToIds = assignedToIds.includes(userId)
-      ? assignedToIds.filter(id => id !== userId)
-      : [...assignedToIds, userId];
-    
-    setValue("assignedToIds", newAssignedToIds);
-    
-    // Clear assigned to error when a user is selected
-    if (newAssignedToIds.length > 0) {
-      setAssignedToError(null);
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
     <div 
-      ref={modalRef}
-      tabIndex={-1}
-      className="fixed inset-0 bg-black/40 bg-opacity-30 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
+      className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
@@ -256,18 +237,6 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
               </svg>
             </button>
           </div>
-          
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-              <div className="flex items-center">
-                <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <h4 className="text-sm font-medium text-red-800">Error creating task</h4>
-              </div>
-              <p className="mt-2 text-sm text-red-700">{error}</p>
-            </div>
-          )}
         </div>
 
         <div className="flex-grow overflow-y-auto px-6 pb-6">
@@ -278,7 +247,7 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
               </label>
               <input
                 id="task-title"
-                {...register("title")}
+                {...register("title", { required: "Title is required" })}
                 className={`w-full px-4 py-3 border ${titleError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition`}
                 placeholder="Enter task title"
                 aria-invalid={titleError ? "true" : "false"}
@@ -330,7 +299,7 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
                 <input
                   id="task-due-date"
                   type="date"
-                  {...register("dueDate")}
+                  {...register("dueDate", { required: "Due date is required" })}
                   className={`w-full px-4 py-3 border ${dueDateError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition`}
                   aria-invalid={dueDateError ? "true" : "false"}
                   aria-describedby={dueDateError ? "due-date-error" : undefined}
@@ -353,14 +322,14 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
                 </label>
                 <select
                   id="task-priority"
-                  {...register("priority")}
+                  {...register("priority", { required: "Priority is required" })}
                   className={`w-full px-4 py-3 border ${priorityError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition`}
                   aria-invalid={priorityError ? "true" : "false"}
                   aria-describedby={priorityError ? "priority-error" : undefined}
                   onChange={handlePriorityChange}
                   onBlur={handlePriorityBlur}
                 >
-                  <option value="">Select priority level</option>
+                  <option value="">Select priority</option>
                   <option value="Low">Low</option>
                   <option value="Medium">Medium</option>
                   <option value="High">High</option>
@@ -395,7 +364,7 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
                           className="flex items-center p-3 hover:bg-gray-50 cursor-pointer"
                           onClick={() => toggleUserSelection(u.id)}
                           role="checkbox"
-                          aria-checked={assignedToIds.includes(u.id)}
+                          aria-checked={assignedToIds?.includes(u.id) || false}
                           tabIndex={0}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
@@ -407,7 +376,7 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
                             <input
                               type="checkbox"
                               id={`user-${u.id}`}
-                              checked={assignedToIds.includes(u.id)}
+                              checked={assignedToIds?.includes(u.id) || false}
                               className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                               readOnly
                               aria-label={`Assign task to ${u.name}`}
@@ -438,10 +407,25 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
               )}
             </div>
 
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <h4 className="text-sm font-medium text-red-800">Error creating task</h4>
+                </div>
+                <p className="mt-2 text-sm text-red-700">{error}</p>
+              </div>
+            )}
+
             <div className="flex justify-end space-x-3 pt-2 mt-auto">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  reset();
+                  onClose();
+                }}
                 className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Cancel

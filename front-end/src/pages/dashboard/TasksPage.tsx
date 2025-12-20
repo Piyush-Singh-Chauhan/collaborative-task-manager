@@ -55,7 +55,7 @@ const TasksPage = () => {
   };
 
   // Optimistic update for task status
-  const updateTaskStatusOptimistically = async (taskId: string, newStatus: string) => {
+  const updateTaskStatusOptimistically = async (taskId: string, newStatus: "To Do" | "In Progress" | "Review" | "Completed") => {
     // Create optimistic data
     const optimisticData = tasks?.map(task => 
       task._id === taskId ? { ...task, status: newStatus } : task
@@ -78,7 +78,7 @@ const TasksPage = () => {
   };
 
   // Optimistic update for task priority
-  const updateTaskPriorityOptimistically = async (taskId: string, newPriority: string) => {
+  const updateTaskPriorityOptimistically = async (taskId: string, newPriority: "Low" | "Medium" | "High" | "Urgent") => {
     // Create optimistic data
     const optimisticData = tasks?.map(task => 
       task._id === taskId ? { ...task, priority: newPriority } : task
@@ -410,7 +410,7 @@ const TasksPage = () => {
                           <select 
                             id={`task-status-${task._id}`}
                             value={task.status}
-                            onChange={(e) => updateTaskStatusOptimistically(task._id, e.target.value)}
+                            onChange={(e) => updateTaskStatusOptimistically(task._id, e.target.value as any)}
                             className={`text-xs px-2.5 py-0.5 rounded-full appearance-none pr-6 ${getStatusColor(task.status)}`}
                             aria-label={`Change status for task ${task.title}`}
                           >
@@ -430,7 +430,7 @@ const TasksPage = () => {
                           <select 
                             id={`task-priority-${task._id}`}
                             value={task.priority}
-                            onChange={(e) => updateTaskPriorityOptimistically(task._id, e.target.value)}
+                            onChange={(e) => updateTaskPriorityOptimistically(task._id, e.target.value as any)}
                             className={`text-xs px-2.5 py-0.5 rounded-full appearance-none pr-6 ${getPriorityColor(task.priority)}`}
                             aria-label={`Change priority for task ${task.title}`}
                           >
@@ -508,7 +508,7 @@ const TasksPage = () => {
 
       {/* Delete Confirmation Modal */}
       {isDeleteConfirmOpen && (
-        <div className="fixed inset-0 bg-black/40 bg-opacity-30 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">

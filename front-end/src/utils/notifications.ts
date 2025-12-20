@@ -1,30 +1,38 @@
-import { useSocket } from "../context/SocketContext";
+// This file exports utility functions for handling notifications
+// The useSocket hook is imported in components that need it directly
 
-// Utility function to send custom notifications
-export const sendNotification = (socket: any, message: string, type: "info" | "success" | "warning" | "error" = "info") => {
-  if (socket) {
-    socket.emit("notification", { message, type });
+export const showNotification = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+  // In a real app, this would integrate with a notification system
+  console.log(`[${type.toUpperCase()}] ${message}`);
+  
+  // For now, we'll just show an alert (in a real app, you'd use a proper notification component)
+  switch (type) {
+    case 'success':
+      console.info(message);
+      break;
+    case 'error':
+      console.error(message);
+      break;
+    case 'warning':
+      console.warn(message);
+      break;
+    default:
+      console.log(message);
   }
 };
 
-// Utility function to send task notifications
-export const sendTaskNotification = (
-  socket: any, 
-  eventType: "Task:assigned" | "Task:updated" | "Task:deleted", 
-  data: any
-) => {
-  if (socket) {
-    socket.emit(eventType, data);
-  }
+export const showSuccessNotification = (message: string) => {
+  showNotification(message, 'success');
 };
 
-// Predefined notification templates
-export const NotificationTemplates = {
-  TASK_ASSIGNED: (taskTitle: string) => `You have been assigned to task "${taskTitle}"`,
-  TASK_COMPLETED: (taskTitle: string) => `Task "${taskTitle}" has been completed`,
-  TASK_OVERDUE: (taskTitle: string) => `Task "${taskTitle}" is overdue`,
-  PROFILE_UPDATED: () => "Your profile has been updated successfully",
-  TASK_DELETED: (taskTitle: string) => `Task "${taskTitle}" has been deleted`,
-  TASK_PRIORITY_CHANGED: (taskTitle: string, priority: string) => `Task "${taskTitle}" priority changed to ${priority}`,
-  TASK_STATUS_CHANGED: (taskTitle: string, status: string) => `Task "${taskTitle}" status changed to ${status}`
+export const showErrorNotification = (message: string) => {
+  showNotification(message, 'error');
+};
+
+export const showInfoNotification = (message: string) => {
+  showNotification(message, 'info');
+};
+
+export const showWarningNotification = (message: string) => {
+  showNotification(message, 'warning');
 };

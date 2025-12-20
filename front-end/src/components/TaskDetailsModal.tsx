@@ -54,7 +54,6 @@ const TaskDetailsModal = ({ isOpen, onClose, taskId, onTaskUpdated, mutate }: Ta
     reset,
     setValue,
     watch,
-    formState: { errors },
   } = useForm<UpdateTaskPayload>({
     defaultValues: {
       assignedToIds: [],
@@ -144,14 +143,18 @@ const TaskDetailsModal = ({ isOpen, onClose, taskId, onTaskUpdated, mutate }: Ta
 
   // Handle priority change without real-time validation
   const handlePriorityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    setValue("priority", value);
+    const value = e.target.value as "Low" | "Medium" | "High" | "Urgent" | undefined;
+    if (value) {
+      setValue("priority", value);
+    }
   };
 
   // Handle status change without real-time validation
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    setValue("status", value);
+    const value = e.target.value as "To Do" | "In Progress" | "Review" | "Completed" | undefined;
+    if (value) {
+      setValue("status", value);
+    }
   };
 
   // Validation on blur (when user leaves the field)
@@ -276,8 +279,8 @@ const TaskDetailsModal = ({ isOpen, onClose, taskId, onTaskUpdated, mutate }: Ta
           if (!currentData) return currentData;
           
           // Update the specific task optimistically
-          return currentData.map((task: Task) => 
-            task._id === taskId ? { ...task, ...data } : task
+          return currentData.map((taskItem: Task) => 
+            taskItem._id === taskId ? { ...taskItem, ...data } : taskItem
         );
         }, false);
       }
@@ -348,6 +351,8 @@ const TaskDetailsModal = ({ isOpen, onClose, taskId, onTaskUpdated, mutate }: Ta
         mutate();
       }
       
+      // Show error message
+      alert(`Failed to delete task: ${err.response?.data?.message || err.message || "Please try again."}`);
     }
   };
 
@@ -357,9 +362,10 @@ const TaskDetailsModal = ({ isOpen, onClose, taskId, onTaskUpdated, mutate }: Ta
       return;
     }
     
-    const newAssignedToIds = assignedToIds && assignedToIds.includes(userId)
-      ? assignedToIds.filter(id => id !== userId)
-      : [...assignedToIds, userId];
+    const currentAssignedIds = assignedToIds || [];
+    const newAssignedToIds = currentAssignedIds.includes(userId)
+      ? currentAssignedIds.filter(id => id !== userId)
+      : [...currentAssignedIds, userId];
     
     setValue("assignedToIds", newAssignedToIds);
     
@@ -371,9 +377,6 @@ const TaskDetailsModal = ({ isOpen, onClose, taskId, onTaskUpdated, mutate }: Ta
 
   // Check if current user is the task owner
   const isTaskOwner = task?.creatorId === user?.id;
-  
-  // Check if current user is assigned to the task
-  const isAssignedToTask = task?.assignedToIds?.includes(user?.id || '') || false;
 
   if (!isOpen) return null;
 
@@ -381,7 +384,7 @@ const TaskDetailsModal = ({ isOpen, onClose, taskId, onTaskUpdated, mutate }: Ta
     <div 
       ref={modalRef}
       tabIndex={-1}
-      className="fixed inset-0 bg-black/40 bg-opacity-30 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
+      className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
@@ -583,23 +586,23 @@ const TaskDetailsModal = ({ isOpen, onClose, taskId, onTaskUpdated, mutate }: Ta
                       <div className="divide-y divide-gray-200">
                         {users.map(u => (
                           <div 
-                            key={u._id} 
+                            key={u.id} 
                             className={`flex items-center p-3 hover:${isTaskOwner ? 'bg-gray-50' : 'bg-white'} cursor-${isTaskOwner ? 'pointer' : 'not-allowed'}`}
-                            onClick={() => isTaskOwner && toggleUserSelection(u._id)}
+                            onClick={() => isTaskOwner && toggleUserSelection(u.id)}
                             role="checkbox"
-                            aria-checked={assignedToIds.includes(u._id)}
+                            aria-checked={assignedToIds?.includes(u.id) || false}
                             tabIndex={isTaskOwner ? 0 : -1}
                             onKeyDown={(e) => {
                               if (isTaskOwner && (e.key === 'Enter' || e.key === ' ')) {
-                                toggleUserSelection(u._id);
+                                toggleUserSelection(u.id);
                               }
                             }}
                           >
                             <div className="flex items-center h-5">
                               <input
                                 type="checkbox"
-                                id={`user-${u._id}`}
-                                checked={assignedToIds.includes(u._id)}
+                                id={`user-${u.id}`}
+                                checked={assignedToIds?.includes(u.id) || false}
                                 className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                 readOnly
                                 aria-label={`Assign task to ${u.name}`}
@@ -611,7 +614,7 @@ const TaskDetailsModal = ({ isOpen, onClose, taskId, onTaskUpdated, mutate }: Ta
                                 {u.name?.charAt(0)?.toUpperCase() || 'U'}
                               </div>
                               <div>
-                                <label htmlFor={`user-${u._id}`} className="text-sm font-medium text-gray-900">{u.name}</label>
+                                <label htmlFor={`user-${u.id}`} className="text-sm font-medium text-gray-900">{u.name}</label>
                                 <p className="text-xs text-gray-500">{u.email}</p>
                               </div>
                             </div>
@@ -654,8 +657,8 @@ const TaskDetailsModal = ({ isOpen, onClose, taskId, onTaskUpdated, mutate }: Ta
                   <div>
                     <span className="font-medium">Assigned To:</span>
                     <ul className="list-disc list-inside ml-2">
-                      {task.assignedToIds && task.assignedToIds.map((id, index) => {
-                        const assignedUser = users.find(u => u._id === id);
+                      {task.assignedToIds && task.assignedToIds.map((id) => {
+                        const assignedUser = users.find(u => u.id === id);
                         return (
                           <li key={id}>
                             {assignedUser ? assignedUser.name : "Unknown user"}
