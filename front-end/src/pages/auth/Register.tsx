@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerUser } from "../../api/auth.api";
 import type { RegisterPayload } from "../../types/auth.types";
-import { validateName, validateEmail, validatePassword, capitalizeFirstLetter } from "../../utils/validation";
+import { ValidationService } from "../../utils/validation";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -16,80 +16,76 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  // Field-specific errors
+  // Field-specific errors (shown on blur and submit)
   const [nameError, setNameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  // Real-time validation on field change
+  // Helper function to auto-capitalize first letter of each word
+  const autoCapitalizeName = (value: string): string => {
+    return value.replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  // Handle name change without real-time validation
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Automatically capitalize first letter
-    const capitalizedValue = value.length > 0 ? capitalizeFirstLetter(value) : value;
+    
+    // Auto-capitalize first letter of each word
+    const capitalizedValue = autoCapitalizeName(value);
     
     setFormData({
       ...formData,
       name: capitalizedValue,
     });
-    
-    // Real-time validation
-    const error = validateName(capitalizedValue);
-    setNameError(error);
   };
 
+  // Handle email change without real-time validation
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData({
       ...formData,
       email: value,
     });
-    
-    // Real-time validation
-    const error = validateEmail(value);
-    setEmailError(error);
   };
 
+  // Handle password change without real-time validation
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData({
       ...formData,
       password: value,
     });
-    
-    // Real-time validation
-    const error = validatePassword(value);
-    setPasswordError(error);
   };
 
   // Validation on blur (when user leaves the field)
   const handleNameBlur = () => {
-    const error = validateName(formData.name);
-    setNameError(error);
+    const error = ValidationService.validateName(formData.name);
+    setNameError(error?.message ?? null);
   };
 
   const handleEmailBlur = () => {
-    const error = validateEmail(formData.email);
-    setEmailError(error);
+    const error = ValidationService.validateEmail(formData.email);
+    setEmailError(error?.message ?? null);
   };
 
   const handlePasswordBlur = () => {
-    const error = validatePassword(formData.password);
-    setPasswordError(error);
+    const error = ValidationService.validatePassword(formData.password);
+    setPasswordError(error?.message ?? null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     
-    // Final validation before submission
-    const nameValidationError = validateName(formData.name);
-    const emailValidationError = validateEmail(formData.email);
-    const passwordValidationError = validatePassword(formData.password);
-    
-    setNameError(nameValidationError);
-    setEmailError(emailValidationError);
-    setPasswordError(passwordValidationError);
-    
+    // Validation on submit
+    const nameValidationError = ValidationService.validateName(formData.name);
+    const emailValidationError = ValidationService.validateEmail(formData.email);
+    const passwordValidationError = ValidationService.validatePassword(formData.password);
+
+    setNameError(nameValidationError?.message ?? null);
+    setEmailError(emailValidationError?.message ?? null);
+    setPasswordError(passwordValidationError?.message ?? null);
+
     // If any validation fails, prevent submission
     if (nameValidationError || emailValidationError || passwordValidationError) {
       return;
@@ -97,11 +93,16 @@ const Register = () => {
 
     try {
       setLoading(true);
-      await registerUser(formData);
+      const response = await registerUser(formData);
+      
+      // For demo purposes, show the OTP in the response
+      if (response.otp) {
+        console.log("Demo OTP (for testing only):", response.otp);
+      }
 
       // move to verify otp page
       navigate("/verify-otp", {
-        state: { email: formData.email },
+        state: { email: response.email },
       });
     } catch (err: any) {
       setError(err.response?.data?.message || "Registration failed");

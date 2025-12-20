@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 
-const saltValue = process.env.SALTVALUE
+const saltValue = parseInt(process.env.SALTVALUE || "10");
 
 if(!saltValue) {
     throw new Error ("Salt Value is not defined.")

@@ -15,10 +15,13 @@ export const createNewTask = async(data : any, creatorId : string) => {
    if(task.assignedToIds && task.assignedToIds.length > 0) {
     task.assignedToIds.forEach(assignedUserId => {
       io.to(assignedUserId.toString()).emit("Task:assigned", {
-          message : "A new task has been assigned to you."
+          message : `A new task "${task.title}" has been assigned to you.`,
+          task: task
       })
     });
    }
+   
+   return task;
 }
 
 export const getUserTasks = async (userId : string)=>{
@@ -40,13 +43,27 @@ export const updateTask = async(taskId : string, userId : string, data : any) =>
 
     const updatedTask = await updateTaskById(taskId, data);
 
-    // Notify all assigned users about status update
-    if(data.status && task.assignedToIds && task.assignedToIds.length > 0) {
+    // Notify all assigned users about various updates
+    if(task.assignedToIds && task.assignedToIds.length > 0) {
         task.assignedToIds.forEach(assignedUserId => {
-            io.to(assignedUserId.toString()).emit("Task:updated", {
-                message : `Task status updated to ${data.status}`,
-                task : updatedTask,
-            });
+            // Skip notification for the user who made the change
+            if (assignedUserId.toString() !== userId) {
+                let message = `Task "${task.title}" has been updated.`;
+                
+                // Specific messages for different types of updates
+                if (data.status) {
+                    message = `Task "${task.title}" status updated to ${data.status}.`;
+                } else if (data.priority) {
+                    message = `Task "${task.title}" priority changed to ${data.priority}.`;
+                } else if (data.title) {
+                    message = `Task renamed to "${data.title}".`;
+                }
+                
+                io.to(assignedUserId.toString()).emit("Task:updated", {
+                    message: message,
+                    task: updatedTask,
+                });
+            }
         });
     }
 
@@ -60,6 +77,19 @@ export const deleteTask = async (taskId : string, userId: string) => {
 
     if(task.creatorId.toString() !== userId){
         throw new Error ("Only creator can delete task.");
+    }
+
+    // Notify all assigned users about task deletion
+    if(task.assignedToIds && task.assignedToIds.length > 0) {
+        task.assignedToIds.forEach(assignedUserId => {
+            // Skip notification for the user who deleted the task
+            if (assignedUserId.toString() !== userId) {
+                io.to(assignedUserId.toString()).emit("Task:deleted", {
+                    message: `Task "${task.title}" has been deleted by the creator.`,
+                    taskId: taskId
+                });
+            }
+        });
     }
 
     return deleteTaskById(taskId);

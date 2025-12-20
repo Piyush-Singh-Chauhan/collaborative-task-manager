@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { loginUser } from "../../api/auth.api";
 import { useAuth } from "../../context/AuthContext";
 import type { LoginPayload } from "../../types/auth.types";
-import { validateEmail, validatePassword } from "../../utils/validation";
+import { ValidationService } from "../../utils/validation";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -17,11 +17,11 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  // Field-specific errors
+  // Field-specific errors (shown on blur and submit)
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  // Real-time validation on field change
+  // Handle email change without real-time validation
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData({
@@ -30,43 +30,41 @@ const Login = () => {
     });
     
     // Real-time validation
-    const error = validateEmail(value);
-    setEmailError(error);
+    const error = ValidationService.validateEmail(value);
+setEmailError(error?.message ?? null);
+
   };
 
+  // Handle password change without real-time validation
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData({
       ...formData,
       password: value,
     });
-    
-    // Real-time validation
-    const error = validatePassword(value);
-    setPasswordError(error);
   };
 
   // Validation on blur (when user leaves the field)
   const handleEmailBlur = () => {
-    const error = validateEmail(formData.email);
-    setEmailError(error);
+    const error = ValidationService.validateEmail(formData.email);
+    setEmailError(error?.message ?? null);
   };
 
   const handlePasswordBlur = () => {
-    const error = validatePassword(formData.password);
-    setPasswordError(error);
+    const error = ValidationService.validatePassword(formData.password);
+    setPasswordError(error?.message ?? null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     
-    // Final validation before submission
-    const emailValidationError = validateEmail(formData.email);
-    const passwordValidationError = validatePassword(formData.password);
-    
-    setEmailError(emailValidationError);
-    setPasswordError(passwordValidationError);
+    // Validation on submit
+    const emailValidationError = ValidationService.validateEmail(formData.email);
+    const passwordValidationError = ValidationService.validatePassword(formData.password);
+
+    setEmailError(emailValidationError?.message ?? null);
+    setPasswordError(passwordValidationError?.message ?? null);
     
     // If any validation fails, prevent submission
     if (emailValidationError || passwordValidationError) {
@@ -180,9 +178,13 @@ const Login = () => {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+              <button 
+                type="button"
+                onClick={() => navigate("/forgot-password")}
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
                 Forgot password?
-              </a>
+              </button>
             </div>
           </div>
 

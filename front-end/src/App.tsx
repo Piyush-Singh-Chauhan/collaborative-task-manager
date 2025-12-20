@@ -5,7 +5,7 @@ const App = () => {
   return (
     <>
       <AppRoutes />
-      <Notification />
+      {/* <Notification /> */}
     </>
   );
 };

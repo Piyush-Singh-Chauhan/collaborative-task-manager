@@ -50,6 +50,52 @@ const TasksPage = () => {
     });
   };
 
+  // Optimistic update for task status
+  const updateTaskStatusOptimistically = async (taskId: string, newStatus: string) => {
+    // Create optimistic data
+    const optimisticData = tasks?.map(task => 
+      task._id === taskId ? { ...task, status: newStatus } : task
+    ) || [];
+
+    // Update UI immediately
+    mutate(optimisticData, false);
+
+    try {
+      // Make API call
+      await taskApi.updateTask(taskId, { status: newStatus });
+      
+      // Revalidate to ensure consistency
+      mutate();
+    } catch (error) {
+      // Rollback on error
+      mutate();
+      console.error("Failed to update task status:", error);
+    }
+  };
+
+  // Optimistic update for task priority
+  const updateTaskPriorityOptimistically = async (taskId: string, newPriority: string) => {
+    // Create optimistic data
+    const optimisticData = tasks?.map(task => 
+      task._id === taskId ? { ...task, priority: newPriority } : task
+    ) || [];
+
+    // Update UI immediately
+    mutate(optimisticData, false);
+
+    try {
+      // Make API call
+      await taskApi.updateTask(taskId, { priority: newPriority });
+      
+      // Revalidate to ensure consistency
+      mutate();
+    } catch (error) {
+      // Rollback on error
+      mutate();
+      console.error("Failed to update task priority:", error);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "To Do": return "bg-gray-100 text-gray-800";
@@ -193,8 +239,9 @@ const TasksPage = () => {
             <button 
               onClick={() => setIsModalOpen(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+              aria-label="Create new task"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
               </svg>
               Create Task
@@ -208,8 +255,9 @@ const TasksPage = () => {
               <button
                 onClick={clearFilters}
                 className="text-sm text-gray-600 hover:text-gray-800 font-medium flex items-center"
+                aria-label="Reset all filters"
               >
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                 </svg>
                 Reset Filters
@@ -217,8 +265,9 @@ const TasksPage = () => {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label htmlFor="filter-status" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select
+                  id="filter-status"
                   value={filters.status}
                   onChange={(e) => handleFilterChange("status", e.target.value)}
                   className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -232,8 +281,9 @@ const TasksPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <label htmlFor="filter-priority" className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                 <select
+                  id="filter-priority"
                   value={filters.priority}
                   onChange={(e) => handleFilterChange("priority", e.target.value)}
                   className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -247,8 +297,9 @@ const TasksPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                <label htmlFor="filter-sort" className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
                 <select
+                  id="filter-sort"
                   value={filters.sortBy}
                   onChange={(e) => handleFilterChange("sortBy", e.target.value)}
                   className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -272,7 +323,7 @@ const TasksPage = () => {
             <div className="bg-white rounded-xl shadow-sm p-12 text-center">
               <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                 </svg>
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-1">No tasks found</h3>
@@ -290,19 +341,63 @@ const TasksPage = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {tasks && tasks.map((task) => (
-                <div key={task._id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <div 
+                  key={task._id} 
+                  className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                  role="article"
+                  aria-labelledby={`task-title-${task._id}`}
+                >
                   <div className="p-5">
                     <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-semibold text-lg text-gray-800">{task.title}</h3>
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full ${getStatusColor(task.status)}`}>
+                      <h3 id={`task-title-${task._id}`} className="font-semibold text-lg text-gray-800">{task.title}</h3>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full {getStatusColor(task.status)`}>
                         {task.status}
                       </span>
                     </div>
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2">{task.description}</p>
                     <div className="flex justify-between items-center">
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full ${getPriorityColor(task.priority)}`}>
-                        {task.priority}
-                      </span>
+                      <div className="flex flex-col space-y-1">
+                        <div className="relative">
+                          <label htmlFor={`task-status-${task._id}`} className="sr-only">Task Status</label>
+                          <select 
+                            id={`task-status-${task._id}`}
+                            value={task.status}
+                            onChange={(e) => updateTaskStatusOptimistically(task._id, e.target.value)}
+                            className={`text-xs px-2.5 py-0.5 rounded-full appearance-none pr-6 ${getStatusColor(task.status)}`}
+                            aria-label={`Change status for task ${task.title}`}
+                          >
+                            <option value="To Do">To Do</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Review">Review</option>
+                            <option value="Completed">Completed</option>
+                          </select>
+                          <div className="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
+                            <svg className="w-3 h-3 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="relative">
+                          <label htmlFor={`task-priority-${task._id}`} className="sr-only">Task Priority</label>
+                          <select 
+                            id={`task-priority-${task._id}`}
+                            value={task.priority}
+                            onChange={(e) => updateTaskPriorityOptimistically(task._id, e.target.value)}
+                            className={`text-xs px-2.5 py-0.5 rounded-full appearance-none pr-6 ${getPriorityColor(task.priority)}`}
+                            aria-label={`Change priority for task ${task.title}`}
+                          >
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Urgent">Urgent</option>
+                          </select>
+                          <div className="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
+                            <svg className="w-3 h-3 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
                       <div className="text-xs text-gray-500 flex items-center">
                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -321,6 +416,7 @@ const TasksPage = () => {
                         setIsDetailsModalOpen(true);
                       }}
                       className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      aria-label={`View details for task ${task.title}`}
                     >
                       View Details
                     </button>
@@ -336,6 +432,7 @@ const TasksPage = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onTaskCreated={() => mutate()}
+        mutate={mutate}
       />
       
       <TaskDetailsModal
@@ -346,6 +443,7 @@ const TasksPage = () => {
         }}
         taskId={selectedTaskId}
         onTaskUpdated={() => mutate()}
+        mutate={mutate}
       />
     </div>
   );

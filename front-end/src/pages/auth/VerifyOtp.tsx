@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { verifyOtp } from "../../api/auth.api";
+import { verifyOtp, resendOtp } from "../../api/auth.api";
 import type { VerifyOtpPayload } from "../../types/auth.types";
 
 const VerifyOtp = () => {
@@ -17,6 +17,8 @@ const VerifyOtp = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendLoading, setResendLoading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [otpError, setOtpError] = useState<string | null>(null);
 
   // If user directly opens verify-otp page
   useEffect(() => {
@@ -32,16 +34,35 @@ const VerifyOtp = () => {
     });
   };
 
+  // Validation on blur (when user leaves the field)
+  const handleOtpBlur = () => {
+    if (formData.otp && formData.otp.length !== 6) {
+      setOtpError("Please enter a valid 6-digit code");
+    } else {
+      setOtpError(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
+
+    // Validate OTP on submit
+    if (!formData.otp || formData.otp.length !== 6) {
+      setOtpError("Please enter a valid 6-digit code");
+      return;
+    }
 
     try {
       setLoading(true);
       await verifyOtp(formData);
 
       // OTP verified → go to login
-      navigate("/login");
+      setSuccess("Account verified successfully! Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     } catch (err: any) {
       setError(err.response?.data?.message || "Invalid OTP");
     } finally {
@@ -51,13 +72,19 @@ const VerifyOtp = () => {
 
   const handleResendOtp = async () => {
     setResendLoading(true);
+    setError(null);
+    setSuccess(null);
     try {
-      // In a real app, you would call an API to resend the OTP
-      // For now, we'll just simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      alert("OTP resent successfully!");
-    } catch (err) {
-      setError("Failed to resend OTP");
+      const response = await resendOtp(formData.email);
+      
+      // For demo purposes, show the new OTP in the response
+      if (response.otp) {
+        console.log("Demo OTP (for testing only):", response.otp);
+      }
+      
+      setSuccess("A new OTP has been sent to your email. Please check your inbox.");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to resend OTP");
     } finally {
       setResendLoading(false);
     }
@@ -88,6 +115,12 @@ const VerifyOtp = () => {
           </div>
         )}
 
+        {success && (
+          <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-green-600 text-sm text-center">{success}</p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
@@ -98,10 +131,19 @@ const VerifyOtp = () => {
               placeholder="Enter 6-digit code"
               value={formData.otp}
               onChange={handleChange}
+              onBlur={handleOtpBlur}
               required
               maxLength={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-center text-2xl tracking-widest"
+              className={`w-full px-4 py-3 border ${otpError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-center text-2xl tracking-widest`}
             />
+            {otpError && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {otpError}
+              </p>
+            )}
           </div>
 
           <button

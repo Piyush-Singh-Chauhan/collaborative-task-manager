@@ -1,20 +1,17 @@
 import { Request, Response } from "express";
-import { registerSchema, loginSchema } from "./auth.dto";
-import { registerUser, loginUser } from "./auth.service";
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, verifyOtpSchema } from "./auth.dto";
+import { registerUser, loginUser, forgotPassword, resetPassword, verifyOtpAndCreateUser, resendOtp } from "./auth.service";
 
 export const register = async ( req : Request, res: Response)=>{
     try {
         const validatedData = registerSchema.parse(req.body);
-        const user = await registerUser(validatedData);
+        const result = await registerUser(validatedData);
 
-        res.status(201).json({
-            message : "User register successfully.",
-            user,
-        })
+        res.status(201).json(result);
 
     } catch(err : any){
         res.status(400).json({
-            message : err.mesaage || "Registration Faild."
+            message : err.message || "Registration Failed."
         })
         console.log(err);
     }
@@ -43,6 +40,42 @@ export const login = async(req : Request, res: Response)=>{
     }
 }
 
+// Verify OTP controller
+export const verifyOtp = async (req: Request, res: Response) => {
+    try {
+        const validatedData = verifyOtpSchema.parse(req.body);
+        const result = await verifyOtpAndCreateUser(validatedData);
+        
+        res.status(200).json(result);
+    } catch (err: any) {
+        res.status(400).json({
+            message: err.message || "OTP verification failed"
+        });
+    }
+};
+
+// Resend OTP controller
+export const resendOtpController = async (req: Request, res: Response) => {
+    try {
+        // Expect email in request body
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({
+                message: "Email is required"
+            });
+        }
+        
+        const result = await resendOtp({ email });
+        
+        res.status(200).json(result);
+    } catch (err: any) {
+        res.status(400).json({
+            message: err.message || "Failed to resend OTP"
+        });
+    }
+};
+
 export const logout = (req : Request, res : Response) =>{
     res.clearCookie("token" , {
         httpOnly : true,
@@ -54,3 +87,29 @@ export const logout = (req : Request, res : Response) =>{
         message : "Logout Successfully.",
     })
 }
+
+export const forgotPasswordController = async (req: Request, res: Response) => {
+    try {
+        const validatedData = forgotPasswordSchema.parse(req.body);
+        const result = await forgotPassword(validatedData);
+        
+        res.status(200).json(result);
+    } catch (err: any) {
+        res.status(400).json({
+            message: err.message || "Failed to process forgot password request"
+        });
+    }
+};
+
+export const resetPasswordController = async (req: Request, res: Response) => {
+    try {
+        const validatedData = resetPasswordSchema.parse(req.body);
+        const result = await resetPassword(validatedData);
+        
+        res.status(200).json(result);
+    } catch (err: any) {
+        res.status(400).json({
+            message: err.message || "Failed to reset password"
+        });
+    }
+};

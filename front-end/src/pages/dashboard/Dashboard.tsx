@@ -3,6 +3,7 @@ import useSWR from "swr";
 import Navbar from "../../components/layout/Navbar";
 import Sidebar from "../../components/layout/Sidebar";
 import { taskApi } from "../../api/task.api";
+import { NavLink } from "react-router-dom";
 
 const Dashboard = () => {
   const [timeRange, setTimeRange] = useState("week"); // week, month, year
@@ -260,9 +261,11 @@ const Dashboard = () => {
             <div className="bg-white rounded-xl shadow-sm p-5 md:p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-semibold text-gray-800">Recent Tasks</h2>
-                <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                  View All
-                </button>
+                <NavLink to="/tasks">
+                  <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    View All
+                  </button>
+                </NavLink>
               </div>
               
               {recentTasks.length === 0 ? (
