@@ -88,14 +88,22 @@ A full-stack collaborative task management application built with modern technol
    ```env
    PORT=5000
    MONGODB_URI=your_mongodb_connection_string
+   DBNAME=your_database_name
+   SALTVALUE=10
    JWT_SECRET=your_jwt_secret
    EMAIL_USER=your_email@gmail.com
    EMAIL_PASS=your_app_password
+   CLIENT_URL=http://localhost:5173
    ```
 
-4. Start the development server:
+4. Build the TypeScript code:
    ```bash
-   npm run dev
+   npm run build
+   ```
+
+5. Start the production server:
+   ```bash
+   npm start
    ```
 
 ### Frontend
@@ -115,9 +123,14 @@ A full-stack collaborative task management application built with modern technol
    VITE_API_BASE_URL=http://localhost:5000/api
    ```
 
-4. Start the development server:
+4. Build the application:
    ```bash
-   npm run dev
+   npm run build
+   ```
+
+5. Preview the production build:
+   ```bash
+   npm run preview
    ```
 
 ## Real-time Features
@@ -129,14 +142,26 @@ The application uses Socket.IO for real-time communication:
 
 ## Deployment
 
-### Backend
+### Option 1: Using Docker (Recommended)
+
+1. Make sure you have Docker and Docker Compose installed
+2. Create `.env` files in both `backend` and `front-end` directories based on the `.env.example` files
+3. Run the application:
+   ```bash
+   docker-compose up --build
+   ```
+
+### Option 2: Manual Deployment
+
+#### Backend
 Deploy to Railway or Render with the following environment variables:
 - `MONGODB_URI`
 - `JWT_SECRET`
 - `EMAIL_USER`
 - `EMAIL_PASS`
+- `CLIENT_URL`
 
-### Frontend
+#### Frontend
 Deploy to Vercel with the following environment variables:
 - `VITE_API_BASE_URL` (set to your deployed backend URL)
 
@@ -152,7 +177,6 @@ Deploy to Vercel with the following environment variables:
 ## Future Enhancements
 
 - Unit testing with Jest
-- Dockerization for easier deployment
 - Advanced filtering and search capabilities
 - Task comments and attachments
 - User profile management

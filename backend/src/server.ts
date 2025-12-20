@@ -13,7 +13,21 @@ const server = http.createServer(app);
 
 export const io = new Server(server, {
   cors : {
-    origin : "http://localhost:5173",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Allow requests from localhost on any port
+      if (origin.match(/^http:\/\/localhost:\d+$/)) {
+        return callback(null, true);
+      }
+      
+      // For production, you might want to add your production domain here
+      // Example: if (origin === 'https://yourdomain.com') return callback(null, true);
+      
+      // Block requests from unknown origins
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials : true
   }
 })

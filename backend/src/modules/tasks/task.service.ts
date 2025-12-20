@@ -33,20 +33,46 @@ export const updateTask = async(taskId : string, userId : string, data : any) =>
 
     if(!task) throw new Error("Task not found.");
 
-    // Check if user is creator or assigned to the task
+    // Check if user is the creator (owner) of the task
+    // Only the task owner can update the task
     const isCreator = task.creatorId.toString() === userId;
-    const isAssigned = task.assignedToIds.some(id => id.toString() === userId);
     
-    if(!isCreator && !isAssigned) {
-        throw new Error ("Unauthorized");
+    if(!isCreator) {
+        throw new Error ("Only the task owner can update this task.");
     }
 
+    // Store previous assigned users to compare later
+    const previousAssignedUsers = task.assignedToIds || [];
+    
     const updatedTask = await updateTaskById(taskId, data);
 
-    // Notify all assigned users about various updates
-    if(task.assignedToIds && task.assignedToIds.length > 0) {
-        task.assignedToIds.forEach(assignedUserId => {
-            // Skip notification for the user who made the change
+    // Check if assigned users have changed
+    const newAssignedUsers = updatedTask.assignedToIds || [];
+    const assignedUsersChanged = JSON.stringify(previousAssignedUsers.map(id => id.toString())) !== 
+                                 JSON.stringify(newAssignedUsers.map(id => id.toString()));
+
+    // Notify newly assigned users
+    if (assignedUsersChanged && newAssignedUsers.length > 0) {
+        newAssignedUsers.forEach(assignedUserId => {
+            // Skip notification for the user who made the change (task owner)
+            if (assignedUserId.toString() !== userId) {
+                // Check if this user was newly assigned (not in previous assignment)
+                const isNewlyAssigned = !previousAssignedUsers.some(prevId => prevId.toString() === assignedUserId.toString());
+                
+                if (isNewlyAssigned) {
+                    io.to(assignedUserId.toString()).emit("Task:assigned", {
+                        message: `You have been assigned to task "${updatedTask.title}".`,
+                        task: updatedTask,
+                    });
+                }
+            }
+        });
+    }
+
+    // Notify all assigned users about other updates (status, priority, etc.)
+    if(newAssignedUsers.length > 0) {
+        newAssignedUsers.forEach(assignedUserId => {
+            // Skip notification for the user who made the change (task owner)
             if (assignedUserId.toString() !== userId) {
                 let message = `Task "${task.title}" has been updated.`;
                 
@@ -59,10 +85,13 @@ export const updateTask = async(taskId : string, userId : string, data : any) =>
                     message = `Task renamed to "${data.title}".`;
                 }
                 
-                io.to(assignedUserId.toString()).emit("Task:updated", {
-                    message: message,
-                    task: updatedTask,
-                });
+                // Only send update notifications for non-assignment changes
+                if (!assignedUsersChanged || (data.status || data.priority || data.title || data.description || data.dueDate)) {
+                    io.to(assignedUserId.toString()).emit("Task:updated", {
+                        message: message,
+                        task: updatedTask,
+                    });
+                }
             }
         });
     }

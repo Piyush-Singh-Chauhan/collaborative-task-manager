@@ -18,7 +18,7 @@ const ForgotPassword = () => {
   const handleEmailBlur = () => {
     // Simple email validation on blur
     if (!email) {
-      setEmailError("Email is required");
+      setEmailError("Please enter your email.");
       return;
     }
 
@@ -38,7 +38,7 @@ const ForgotPassword = () => {
 
     // Email validation on submit
     if (!email) {
-      setEmailError("Email is required");
+      setEmailError("Please enter your email.");
       return;
     }
 
@@ -61,7 +61,7 @@ const ForgotPassword = () => {
         navigate("/reset-password", { state: { email } });
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to send reset instructions");
+      setError(err.response?.data?.message || "Failed to send reset instructions.");
     } finally {
       setLoading(false);
     }
@@ -100,6 +100,8 @@ const ForgotPassword = () => {
               type="email"
               placeholder="you@example.com"
               value={email}
+              maxLength={60}
+              minLength={5}
               onChange={handleEmailChange}
               onBlur={handleEmailBlur}
               required

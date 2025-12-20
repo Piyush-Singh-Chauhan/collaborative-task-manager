@@ -5,8 +5,10 @@ import Navbar from "../../components/layout/Navbar";
 import Sidebar from "../../components/layout/Sidebar";
 import TaskModal from "../../components/TaskModal";
 import TaskDetailsModal from "../../components/TaskDetailsModal";
+import { useAuth } from "../../context/AuthContext";
 
 const TasksPage = () => {
+  const { user } = useAuth();
   const [filters, setFilters] = useState({
     status: "",
     priority: "",
@@ -15,6 +17,8 @@ const TasksPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<{id: string, title: string} | null>(null);
 
   // Create a cache key based on filters
   const cacheKey = useMemo(() => {
@@ -94,6 +98,50 @@ const TasksPage = () => {
       mutate();
       console.error("Failed to update task priority:", error);
     }
+  };
+
+  // Delete task function
+  const deleteTask = async () => {
+    if (!taskToDelete) return;
+    
+    try {
+      // Optimistic update - remove task from UI immediately
+      const optimisticData = tasks?.filter(task => task._id !== taskToDelete.id) || [];
+      mutate(optimisticData, false);
+      
+      // Close confirmation dialog
+      setIsDeleteConfirmOpen(false);
+      
+      // Make API call
+      await taskApi.deleteTask(taskToDelete.id);
+      
+      // Revalidate to ensure consistency
+      mutate();
+      
+      // Clear task to delete
+      setTaskToDelete(null);
+      
+      // Show success message
+      alert("Task deleted successfully!");
+    } catch (error: any) {
+      // Rollback on error
+      mutate();
+      console.error("Failed to delete task:", error);
+      // Show error message
+      alert(`Failed to delete task: ${error.response?.data?.message || error.message || "Please try again."}`);
+    }
+  };
+
+  // Open delete confirmation dialog
+  const openDeleteConfirmation = (taskId: string, taskTitle: string) => {
+    setTaskToDelete({ id: taskId, title: taskTitle });
+    setIsDeleteConfirmOpen(true);
+  };
+
+  // Close delete confirmation dialog
+  const closeDeleteConfirmation = () => {
+    setIsDeleteConfirmOpen(false);
+    setTaskToDelete(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -350,7 +398,7 @@ const TasksPage = () => {
                   <div className="p-5">
                     <div className="flex justify-between items-start mb-3">
                       <h3 id={`task-title-${task._id}`} className="font-semibold text-lg text-gray-800">{task.title}</h3>
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full {getStatusColor(task.status)`}>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full ${getStatusColor(task.status)}`}>
                         {task.status}
                       </span>
                     </div>
@@ -410,16 +458,28 @@ const TasksPage = () => {
                     <div className="text-xs text-gray-500">
                       Created {new Date(task.createdAt).toLocaleDateString()}
                     </div>
-                    <button 
-                      onClick={() => {
-                        setSelectedTaskId(task._id);
-                        setIsDetailsModalOpen(true);
-                      }}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                      aria-label={`View details for task ${task.title}`}
-                    >
-                      View Details
-                    </button>
+                    <div className="flex space-x-2">
+                      <button 
+                        onClick={() => {
+                          setSelectedTaskId(task._id);
+                          setIsDetailsModalOpen(true);
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        aria-label={`View details for task ${task.title}`}
+                      >
+                        View Details
+                      </button>
+                      {/* Only show delete button if user is the task creator */}
+                      {task.creatorId === user?.id && (
+                        <button 
+                          onClick={() => openDeleteConfirmation(task._id, task.title)}
+                          className="text-xs text-red-600 hover:text-red-800 font-medium"
+                          aria-label={`Delete task ${task.title}`}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -445,6 +505,52 @@ const TasksPage = () => {
         onTaskUpdated={() => mutate()}
         mutate={mutate}
       />
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteConfirmOpen && (
+        <div className="fixed inset-0 bg-black/40 bg-opacity-30 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Confirm Deletion</h3>
+                <button 
+                  onClick={closeDeleteConfirmation}
+                  className="text-gray-400 hover:text-gray-500"
+                  aria-label="Close"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-600">
+                  Are you sure you want to delete the task <span className="font-semibold">"{taskToDelete?.title}"</span>? 
+                  This action cannot be undone.
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={closeDeleteConfirmation}
+                  className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={deleteTask}
+                  className="px-5 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors flex items-center"
+                >
+                  Delete Task
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

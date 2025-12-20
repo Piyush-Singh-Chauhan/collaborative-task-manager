@@ -53,30 +53,57 @@ export class ValidationService {
   }
   
   static validateTaskTitle(title: string): ValidationError | null {
-    if (!title || title.trim().length === 0) {
-      return { field: "title", message: "Please enter the title." };
+    // Check if field is empty
+    if (isEmpty(title)) {
+      return { field: "title", message: "Please enter the task title." };
     }
     
+    // Check minimum length
     if (title.trim().length < 2) {
       return { field: "title", message: "Title must be at least 2 characters long" };
     }
     
+    // Check maximum length
     if (title.trim().length > 100) {
       return { field: "title", message: "Title must be less than 100 characters" };
+    }
+    
+    // Check for valid characters (similar to name validation but allowing more characters)
+    // Allow alphanumeric characters, spaces, and common punctuation
+    const titleRegex = /^[A-Za-z0-9\s\-_',.!?&():]+$/;
+    if (!titleRegex.test(title)) {
+      return { field: "title", message: "Title contains invalid characters" };
+    }
+    
+    // Check first letter is capital
+    const firstChar = title.trim().charAt(0);
+    if (firstChar !== firstChar.toUpperCase()) {
+      return { field: "title", message: "First letter must be capitalized" };
     }
     
     return null;
   }
   
   static validateTaskDescription(description: string): ValidationError | null {
-    if (description && description.length > 1000) {
-      return { field: "description", message: "Description must be less than 1000 characters" };
+    // Description is optional, but if provided, check constraints
+    if (description) {
+      // Check maximum length
+      if (description.length > 150) {
+        return { field: "description", message: "Description must be less than 150 characters" };
+      }
+      
+      // Check for valid characters
+      const descRegex = /^[A-Za-z0-9\s\-_',.!?&():]*$/;
+      if (!descRegex.test(description)) {
+        return { field: "description", message: "Description contains invalid characters" };
+      }
     }
     
     return null;
   }
   
   static validateTaskDueDate(dueDate: string): ValidationError | null {
+    // Check if field is empty
     if (!dueDate) {
       return { field: "dueDate", message: "Please select the due date." };
     }
@@ -84,6 +111,14 @@ export class ValidationService {
     const date = new Date(dueDate);
     if (isNaN(date.getTime())) {
       return { field: "dueDate", message: "Invalid date format" };
+    }
+    
+    // Check if date is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day for comparison
+    
+    if (date < today) {
+      return { field: "dueDate", message: "Due date cannot be in the past" };
     }
     
     return null;

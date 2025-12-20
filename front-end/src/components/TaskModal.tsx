@@ -79,14 +79,98 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
     }
   };
 
+  // Field-specific errors (shown on blur and submit)
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
+  const [dueDateError, setDueDateError] = useState<string | null>(null);
+  const [priorityError, setPriorityError] = useState<string | null>(null);
+  const [assignedToError, setAssignedToError] = useState<string | null>(null);
+
+  // Helper function to auto-capitalize first letter of title
+  const autoCapitalizeTitle = (value: string): string => {
+    if (!value) return value;
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+
+  // Handle title change with auto-capitalization
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Auto-capitalize first letter
+    const capitalizedValue = autoCapitalizeTitle(value);
+    setValue("title", capitalizedValue);
+  };
+
+  // Handle description change without real-time validation
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setValue("description", value);
+  };
+
+  // Handle due date change without real-time validation
+  const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setValue("dueDate", value);
+  };
+
+  // Handle priority change without real-time validation
+  const handlePriorityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setValue("priority", value);
+  };
+
+  // Validation on blur (when user leaves the field)
+  const handleTitleBlur = () => {
+    const error = ValidationService.validateTaskTitle(watch("title") || "");
+    setTitleError(error?.message ?? null);
+  };
+
+  const handleDescriptionBlur = () => {
+    const error = ValidationService.validateTaskDescription(watch("description") || "");
+    setDescriptionError(error?.message ?? null);
+  };
+
+  const handleDueDateBlur = () => {
+    const error = ValidationService.validateTaskDueDate(watch("dueDate") || "");
+    setDueDateError(error?.message ?? null);
+  };
+
+  const handlePriorityBlur = () => {
+    const error = ValidationService.validateTaskPriority(watch("priority") || "");
+    setPriorityError(error?.message ?? null);
+  };
+
   const onSubmit = async (data: CreateTaskPayload) => {
     try {
       setLoading(true);
       setError(null);
       
-      // Ensure at least one user is assigned
+      // Clear previous field errors
+      setTitleError(null);
+      setDescriptionError(null);
+      setDueDateError(null);
+      setPriorityError(null);
+      setAssignedToError(null);
+      
+      // Validation on submit
+      const titleValidationError = ValidationService.validateTaskTitle(data.title);
+      const descriptionValidationError = ValidationService.validateTaskDescription(data.description || "");
+      const dueDateValidationError = ValidationService.validateTaskDueDate(data.dueDate);
+      const priorityValidationError = ValidationService.validateTaskPriority(data.priority);
+      
+      // Check if at least one user is assigned
       if (!data.assignedToIds || data.assignedToIds.length === 0) {
-        throw new Error("At least one user must be assigned to the task");
+        setAssignedToError("At least one user must be assigned to the task.");
+        return;
+      }
+
+      setTitleError(titleValidationError?.message ?? null);
+      setDescriptionError(descriptionValidationError?.message ?? null);
+      setDueDateError(dueDateValidationError?.message ?? null);
+      setPriorityError(priorityValidationError?.message ?? null);
+      
+      // If any validation fails, prevent submission
+      if (titleValidationError || descriptionValidationError || dueDateValidationError || priorityValidationError) {
+        return;
       }
       
       // Optimistic update if mutate function is provided
@@ -119,7 +203,7 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
       onTaskCreated();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || "Failed to create task");
+      setError(err.response?.data?.message || err.message || "Failed to create task.");
       console.error(err);
       
       // Revalidate on error to rollback if mutate function is provided
@@ -137,6 +221,11 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
       : [...assignedToIds, userId];
     
     setValue("assignedToIds", newAssignedToIds);
+    
+    // Clear assigned to error when a user is selected
+    if (newAssignedToIds.length > 0) {
+      setAssignedToError(null);
+    }
   };
 
   if (!isOpen) return null;
@@ -145,13 +234,13 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
     <div 
       ref={modalRef}
       tabIndex={-1}
-      className="fixed inset-0 bg-opacity-30 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
+      className="fixed inset-0 bg-black/40 bg-opacity-30 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       <div 
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md transform transition-all duration-300 scale-100 max-h-[90vh] flex flex-col"
+        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col"
         role="document"
       >
         <div className="p-6 flex-shrink-0">
@@ -179,32 +268,30 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
               <p className="mt-2 text-sm text-red-700">{error}</p>
             </div>
           )}
+        </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex-grow flex flex-col">
+        <div className="flex-grow overflow-y-auto px-6 pb-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full">
             <div className="mb-5">
               <label htmlFor="task-title" className="block text-sm font-medium text-gray-700 mb-2">
-                Title
+                Title *
               </label>
               <input
                 id="task-title"
-                {...register("title", { 
-                  required: "Title is required",
-                  validate: (value) => {
-                    const error = ValidationService.validateTaskTitle(value);
-                    return error ? error.message : true;
-                  }
-                })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                {...register("title")}
+                className={`w-full px-4 py-3 border ${titleError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition`}
                 placeholder="Enter task title"
-                aria-invalid={errors.title ? "true" : "false"}
-                aria-describedby={errors.title ? "title-error" : undefined}
+                aria-invalid={titleError ? "true" : "false"}
+                aria-describedby={titleError ? "title-error" : undefined}
+                onChange={handleTitleChange}
+                onBlur={handleTitleBlur}
               />
-              {errors.title && (
+              {titleError && (
                 <p id="title-error" className="mt-2 text-sm text-red-600 flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
-                  {errors.title.message}
+                  {titleError}
                 </p>
               )}
             </div>
@@ -215,88 +302,85 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
               </label>
               <textarea
                 id="task-description"
-                {...register("description", { 
-                  validate: (value) => {
-                    if (value) {
-                      const error = ValidationService.validateTaskDescription(value);
-                      return error ? error.message : true;
-                    }
-                    return true;
-                  }
-                })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                {...register("description")}
+                className={`w-full px-4 py-3 border ${descriptionError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition`}
                 placeholder="Describe your task..."
                 rows={4}
-                aria-describedby="description-help"
+                aria-invalid={descriptionError ? "true" : "false"}
+                aria-describedby={descriptionError ? "description-error" : "description-help"}
+                onChange={handleDescriptionChange}
+                onBlur={handleDescriptionBlur}
               />
-              <p id="description-help" className="mt-1 text-sm text-gray-500">Optional</p>
-            </div>
-
-            <div className="mb-5">
-              <label htmlFor="task-due-date" className="block text-sm font-medium text-gray-700 mb-2">
-                Due Date
-              </label>
-              <input
-                id="task-due-date"
-                type="date"
-                {...register("dueDate", { 
-                  required: "Due date is required",
-                  validate: (value) => {
-                    const error = ValidationService.validateTaskDueDate(value);
-                    return error ? error.message : true;
-                  }
-                })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                aria-invalid={errors.dueDate ? "true" : "false"}
-                aria-describedby={errors.dueDate ? "due-date-error" : undefined}
-              />
-              {errors.dueDate && (
-                <p id="due-date-error" className="mt-2 text-sm text-red-600 flex items-center">
+              <p id="description-help" className="mt-1 text-sm text-gray-500">Optional (max 150 characters)</p>
+              {descriptionError && (
+                <p id="description-error" className="mt-2 text-sm text-red-600 flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
-                  {errors.dueDate.message}
+                  {descriptionError}
                 </p>
               )}
             </div>
 
-            <div className="mb-5">
-              <label htmlFor="task-priority" className="block text-sm font-medium text-gray-700 mb-2">
-                Priority
-              </label>
-              <select
-                id="task-priority"
-                {...register("priority", { 
-                  required: "Priority is required",
-                  validate: (value) => {
-                    const error = ValidationService.validateTaskPriority(value);
-                    return error ? error.message : true;
-                  }
-                })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                aria-invalid={errors.priority ? "true" : "false"}
-                aria-describedby={errors.priority ? "priority-error" : undefined}
-              >
-                <option value="">Select priority level</option>
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-                <option value="Urgent">Urgent</option>
-              </select>
-              {errors.priority && (
-                <p id="priority-error" className="mt-2 text-sm text-red-600 flex items-center">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                  {errors.priority.message}
-                </p>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+              <div>
+                <label htmlFor="task-due-date" className="block text-sm font-medium text-gray-700 mb-2">
+                  Due Date *
+                </label>
+                <input
+                  id="task-due-date"
+                  type="date"
+                  {...register("dueDate")}
+                  className={`w-full px-4 py-3 border ${dueDateError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition`}
+                  aria-invalid={dueDateError ? "true" : "false"}
+                  aria-describedby={dueDateError ? "due-date-error" : undefined}
+                  onChange={handleDueDateChange}
+                  onBlur={handleDueDateBlur}
+                />
+                {dueDateError && (
+                  <p id="due-date-error" className="mt-2 text-sm text-red-600 flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    {dueDateError}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="task-priority" className="block text-sm font-medium text-gray-700 mb-2">
+                  Priority *
+                </label>
+                <select
+                  id="task-priority"
+                  {...register("priority")}
+                  className={`w-full px-4 py-3 border ${priorityError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition`}
+                  aria-invalid={priorityError ? "true" : "false"}
+                  aria-describedby={priorityError ? "priority-error" : undefined}
+                  onChange={handlePriorityChange}
+                  onBlur={handlePriorityBlur}
+                >
+                  <option value="">Select priority level</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Urgent">Urgent</option>
+                </select>
+                {priorityError && (
+                  <p id="priority-error" className="mt-2 text-sm text-red-600 flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    {priorityError}
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="mb-6 flex-grow overflow-y-auto pr-2">
+            <div className="mb-6 flex-grow">
               <fieldset>
                 <legend className="block text-sm font-medium text-gray-700 mb-2">
-                  Assign To
+                  Assign To *
                 </legend>
                 <div className="border border-gray-300 rounded-lg max-h-40 overflow-y-auto" role="group" aria-label="Assign task to users">
                   {usersLoading ? (
@@ -344,12 +428,12 @@ const TaskModal = ({ isOpen, onClose, onTaskCreated, mutate }: TaskModalProps) =
                   )}
                 </div>
               </fieldset>
-              {errors.assignedToIds && (
+              {assignedToError && (
                 <p id="assign-error" className="mt-2 text-sm text-red-600 flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
-                  {errors.assignedToIds.message}
+                  {assignedToError}
                 </p>
               )}
             </div>

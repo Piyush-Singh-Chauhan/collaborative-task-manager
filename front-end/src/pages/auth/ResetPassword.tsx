@@ -52,7 +52,7 @@ const ResetPassword = () => {
     if (formData.newPassword && formData.newPassword.length < 6) {
       setNewPasswordError("Password must be at least 6 characters long");
     } else if (!formData.newPassword) {
-      setNewPasswordError("New password is required");
+      setNewPasswordError("Please enter the new password.");
     } else {
       setNewPasswordError(null);
     }
@@ -75,27 +75,27 @@ const ResetPassword = () => {
     let hasError = false;
 
     if (!formData.email) {
-      setError("Email is required");
+      setError("Please enter your email.");
       hasError = true;
     }
 
     if (!formData.otp || formData.otp.length !== 6) {
-      setOtpError("Please enter a valid 6-digit OTP");
+      setOtpError("Please enter a valid 6-digit OTP.");
       hasError = true;
     }
 
     if (!formData.newPassword) {
-      setNewPasswordError("New password is required");
+      setNewPasswordError("Please enter the new password.");
       hasError = true;
     }
 
     if (formData.newPassword.length < 6) {
-      setNewPasswordError("Password must be at least 6 characters long");
+      setNewPasswordError("Password must be at least 6 characters long.");
       hasError = true;
     }
 
     if (formData.newPassword !== formData.confirmPassword) {
-      setConfirmPasswordError("Passwords do not match");
+      setConfirmPasswordError("Passwords do not match.");
       hasError = true;
     }
 
@@ -118,7 +118,7 @@ const ResetPassword = () => {
         navigate("/login");
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to reset password");
+      setError(err.response?.data?.message || "Failed to reset password.");
     } finally {
       setLoading(false);
     }
@@ -212,7 +212,7 @@ const ResetPassword = () => {
                 )}
               </button>
             </div>
-            <p className="mt-1 text-xs text-gray-500">Minimum 6 characters</p>
+            {/* <p className="mt-1 text-xs text-gray-500">Minimum 6 characters</p> */}
             {newPasswordError && (
               <p className="mt-1 text-sm text-red-600 flex items-center">
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
